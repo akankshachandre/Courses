@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+	<context:annotation-config />
+	<context:component-scan base-package="edu.ncsu.csc540.dao" />
+
+	<bean id="liquibase" class="liquibase.integration.spring.SpringLiquibase">
+		<property name="dataSource" ref="dataSource" />
+		<property name="changeLog" value="classpath:liquibase/db.changelog-1.0.xml" />
+		<property name="dropFirst" value="false" />
+		<property name="shouldRun" value="false" />
+	</bean>
+
+	<bean id="dataSource" class="oracle.jdbc.pool.OracleDataSource">
+		<property name="dataSourceName" value="ds" />
+		<property name="URL" value="jdbc:oracle:thin:@ora.csc.ncsu.edu:1521:orcl" />
+		<property name="user" value="${oracle.username}" />
+		<property name="password" value="${oracle.password}" />
+	</bean>
+
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="jdbc.properties" />
+	</bean>
+
+	<bean id="provisionDao" class="edu.ncsu.csc540.ProvisionDaoImpl">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+</beans>

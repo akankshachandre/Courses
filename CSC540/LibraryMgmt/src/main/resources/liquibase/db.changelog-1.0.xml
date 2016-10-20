@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.3.xsd http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+	<changeSet id="Create Schema" author="max">
+		<sql>
+			Create table Patrons ( unityid varchar(10),
+			password varchar(10),
+			type
+			varchar(10),
+			firstname varchar(20),
+			lastname varchar(20),
+			dept
+			varchar(10),
+			nationality varchar(10),
+			sex varchar(10),
+			PRIMARY KEY(unityid));
+
+			Create Table Students(std_unityid varchar(10) NOT NULL
+			REFERENCES Patrons(unityid),
+			std_number varchar(20),
+			std_cat
+			varchar(20),
+			std_classification varchar(20),
+			degree_program varchar(20),
+			hold int CHECK (hold IN (0,1)),
+			dob date,
+			street varchar(50),
+			city varchar(20),
+			postal_code int,
+			phone_num int,
+			Alt_phone int,
+			PRIMARY KEY(std_unityid),
+			CONSTRAINT student_constraint CHECK (
+			(std_classification = 'Undergraduate' and degree_program='BS')
+			OR (std_classification = 'Graduate' and degree_program IN ('MS' , 'MA')
+			OR (std_classification = 'postgrad' and degree_program = 'PHD'))
+			));
+
+			Create Table Faculty( fac_unityid varchar(10) NOT NULL REFERENCES
+			Patrons(unityid),
+			category varchar(30),
+			faculty_number varchar(30),
+			PRIMARY KEY(fac_unityid) );
+
+			Create Table Courses( cname varchar(20),
+			cid int,
+			fac_unityid varchar(20),
+			book_name varchar(50),
+			PRIMARY KEY(cid),
+			UNIQUE(cid, fac_unityid),
+			FOREIGN KEY(fac_unityid) REFERENCES Faculty);
+			
+			Create Table Resources(host_library varchar(20),
+			resource_id int,
+			type varchar(25),
+			PRIMARY KEY(resource_id));
+			
+			Create Table Notifications(resource_id int NOT NULL REFERENCES Resources(resource_id),
+			patron_unityid NOT NULL REFERENCES Patrons(unityid),
+			message varchar(100) NOT NULL,
+			notification_date DATE NOT NULL,
+			PRIMARY KEY(resource_id, patron_unityid, message, notification_date)
+			);
+			
+Create Table Books (ISBN varchar(20),
+            resource_id int NOT NULL REFERENCES Resources(resource_id),
+            title varchar(50),
+            year_published int,
+            type varchar(20),
+            publisher varchar(20),
+            edition varchar(20),
+            copies int,
+            author varchar(100),
+            PRIMARY KEY(ISBN,resource_id));
+ 
+
+
+Create Table Rooms ( room_number varchar(5),
+			capacity int,
+			floor int,
+			type varchar(20),
+			res_id int NOT NULL REFERENCES Resources(resource_id),
+			PRIMARY KEY (room_number, res_id) );
+
+
+ create table Journals(ISSN varchar(20),
+                      resource_id int NOT NULL REFERENCES Resources(resource_id),
+                      title varchar(100),
+             		year_published int,
+             		author varchar(100),
+             		             
+             		PRIMARY KEY(ISSN,resource_id));
+
+
+			create table conference_proceedings (conf_num varchar(20),
+			resource_id int NOT NULL REFERENCES Resources(resource_id),
+			title varchar(200),
+			year_published int,
+			conference_name varchar(20),
+			author varchar(100),
+			PRIMARY KEY(conf_num,resource_id));
+
+
+
+			create table waitlist_publications(resource_id int NOT NULL REFERENCES Resources(resource_id),
+			unityId varchar(20) NOT NULL REFERENCES Patrons(unityid),
+			entered_date date,
+			PRIMARY KEY(resource_id,unityId)
+			);
+
+
+			create table cameras(camera_id varchar(20),
+            make varchar(20),
+            model varchar(20),
+            lens_config varchar(50),
+            available_memory varchar(10),
+            resource_id int NOT NULL REFERENCES Resources(resource_id),
+            CONSTRAINT unique_camera_id UNIQUE(camera_id),
+            PRIMARY KEY (resource_id));
+
+			
+
+
+			create table Rental_History( checked_out date,
+			due_date date,
+			checked_in date,
+			resource_id int,
+			unityId varchar(20),
+			FOREIGN KEY(unityId ) REFERENCES Patrons,
+			FOREIGN KEY(resource_id) REFERENCES Resources,
+			
+			PRIMARY KEY (unityId, resource_Id, checked_out, due_date));
+
+
+			create table enrolled_courses
+			(cid int,
+			std_unityid varchar(20) NOT NULL
+			REFERENCES Students,
+			PRIMARY KEY(cid, std_unityid)
+			);
+
+  		
+		
+		create table reserved_books (
+			 ISBN varchar(20),
+			 resource_id int,
+			 fac_unityid varchar(20) NOT NULL REFERENCES faculty,
+			 cid int NOT NULL REFERENCES courses,
+			 reservedDurationFrom date,
+			 reservedDurationTo date,
+			 FOREIGN KEY(ISBN,resource_id) REFERENCES Books,
+			 PRIMARY KEY(ISBN,resource_id,cid, fac_unityid, reservedDurationFrom,reservedDurationTo)
+			 );
+
+			create table teaches (
+			cid int NOT NULL REFERENCES courses(cid),
+			fac_unityid varchar(20) NOT NULL,
+			FOREIGN KEY (fac_unityid) REFERENCES faculty,
+			PRIMARY KEY(cid)
+			);
+
+			create table camera_queue (
+				pickup_date DATE NOT NULL,
+				request_date DATE NOT NULL,
+				unityid VARCHAR(10) REFERENCES Patrons,
+				resource_id int REFERENCES Cameras,
+				deleted int CHECK (deleted IN (0,1)) NOT NULL,
+				camera_queue_guid RAW(16),
+				PRIMARY KEY(camera_queue_guid),
+				CONSTRAINT unique_camera_queue UNIQUE(pickup_date,request_date,unityid, resource_id));
+
+			
+			create table lateFees(
+			unityId varchar(20) NOT NULL REFERENCES Patrons(unityId),
+			resource_id int NOT NULL REFERENCES Resources(resource_id),
+			fees int,
+			PRIMARY KEY(unityId,resource_id,fees));
+
+			
+			create table paid_lateFees(
+			unityId varchar(20) NOT NULL REFERENCES Patrons(unityId),
+			resource_id int NOT NULL REFERENCES Resources(resource_id),
+			fees int NOT NULL,
+			transaction_date DATE NOT NULL,
+			PRIMARY KEY(unityId,resource_id,fees, transaction_date));
+
+
+		</sql>
+	</changeSet>
+
+
+
+
+	<changeSet id="testing data" author="max">
+		<sql>
+
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('jpink', 'jpink', 'student', 'Jesse', 'Pinkman', 'Chemistry', 'American', 'Male');		
+		INSERT INTO Students (std_unityid, std_number, std_cat, std_classification, degree_program, hold, dob, street, city, postal_code, phone_num, Alt_phone)
+		VALUES('jpink', 'S1', 'First Year', 'Undergraduate', 'BS', '0', '10-Mar-1988', '1511 Graduate Lane', 'Raleigh, NC', '27606', '123456789', '123456787');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('wjr', 'wjr', 'student', 'Walt', 'Jr.', 'Chemistry', 'American', 'Male');		
+		INSERT INTO Students (std_unityid, std_number, std_cat, std_classification, degree_program, hold, dob, street, city, postal_code, phone_num, Alt_phone)
+		VALUES('wjr', 'S2', 'Second Year', 'Undergraduate', 'BS', '1', '11-Mar-1988', '1512 Graduate Lane', 'Raleigh, NC', '27606', '123456780', '123456781');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('gboet', 'gboet', 'student', 'Gale', 'Boetticher', 'Chemistry', 'Chile', 'Male');		
+		INSERT INTO Students (std_unityid, std_number, std_cat, std_classification, degree_program, hold, dob, street, city, postal_code, phone_num, Alt_phone)
+		VALUES('gboet', 'S3', 'Third Year', 'Undergraduate', 'BS', '0', '12-Mar-1988', '1513 Graduate Lane', 'Raleigh, NC', '27606', '123456782', '123456783');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('sgood', 'sgood', 'student', 'Saul', 'Godman', 'Chemistry', 'American', 'Male');		
+		INSERT INTO Students (std_unityid, std_number, std_cat, std_classification, degree_program, hold, dob, street, city, postal_code, phone_num, Alt_phone)
+		VALUES('sgood', 'S4', 'Second Year', 'Graduate', 'MS', '0', '01-Mar-1988', '1514 Graduate Lane', 'Raleigh, NC', '27606', '123456784', '123456785');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('wwhite', 'wwhite', 'faculty', 'Walter', 'White', 'Chemistry', 'American', '');		
+		INSERT INTO Faculty (fac_unityid, category, faculty_number)
+		VALUES('wwhite', 'Professor', 'F1');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('gfring', 'gfring', 'faculty', 'Gustavo', 'Fring', 'Chemistry', 'American', '');		
+		INSERT INTO Faculty (fac_unityid, category, faculty_number)
+		VALUES('gfring', 'Assistant Professor', 'F2');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('hschrad', 'hschrad', 'faculty', 'Hank', 'Schrader', 'Chemistry', 'American', '');		
+		INSERT INTO Faculty (fac_unityid, category, faculty_number)
+		VALUES('hschrad', 'Associate Professor', 'F3');
+		
+		INSERT INTO Patrons ( unityid, password, type, firstname, lastname, dept, nationality, sex)
+		VALUES('swhite', 'swhite', 'faculty', 'Skyler', 'White', 'Chemistry', 'American', '');		
+		INSERT INTO Faculty (fac_unityid, category, faculty_number)
+		VALUES('swhite', 'Professor', 'F4');
+		
+		INSERT INTO COURSES (cname, cid, fac_unityid, book_name)
+		VALUES('CH101', '101', 'wwhite', 'Introduction to Chemistry');
+		
+		INSERT INTO COURSES (cname, cid, fac_unityid, book_name)
+		VALUES('CH102', '102', 'gfring', 'Introduction to Organic Chemistry'); 
+		
+		INSERT INTO COURSES (cname, cid, fac_unityid, book_name)
+		VALUES('CH103', '103', 'hschrad', 'Introduction to Physical Chemistry');
+		
+		INSERT INTO COURSES (cname, cid, fac_unityid, book_name)
+		VALUES('CH104', '104', 'swhite', 'Introduction to Inorganic Chemistry');  
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('101','jpink');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('101','wjr');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('101','gboet');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('102','wjr');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('102','gboet');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('102','sgood');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('103','gboet');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('103','sgood');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('103','jpink');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('104','jpink');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('104','wjr');
+		
+		INSERT INTO enrolled_courses(cid, std_unityid)
+		VALUES('104','sgood');
+		
+		
+		INSERT INTO RESOURCES
+		VALUES('','0001','Book');
+		
+		INSERT INTO RESOURCES
+		VALUES('','0002','Book');
+		
+		INSERT INTO RESOURCES
+		VALUES('','0003','Book');
+		
+		INSERT INTO RESOURCES
+		VALUES('','0004','Book');
+		
+		INSERT INTO RESOURCES
+		VALUES('','0005','Book');
+		
+		INSERT INTO RESOURCES
+		VALUES('','0006','Book');
+		
+		INSERT INTO RESOURCES
+		VALUES('J.B. Hunt','2001','Camera');
+		
+		INSERT INTO RESOURCES
+		VALUES('J.B. Hunt','2002','Camera');
+		
+		INSERT INTO RESOURCES
+		VALUES('J.B. Hunt','2003','Camera');
+		
+		INSERT INTO RESOURCES
+		VALUES('','3001','Journal');
+
+        INSERT INTO RESOURCES
+		VALUES('','3002','Journal');
+				
+		INSERT INTO RESOURCES
+		VALUES('','4001','Conference Proceeding');
+
+        INSERT INTO RESOURCES
+		VALUES('','4002','Conference Proceeding');
+		
+		INSERT INTO Resources
+		VALUES('J. B. Hunt', 1001, 'Room');
+			
+		INSERT INTO Resources
+		VALUES('J. B. Hunt', 1002, 'Room');
+			
+		INSERT INTO Resources
+		VALUES('D. H. Hill', 1003, 'Room');
+			
+		INSERT INTO Resources
+		VALUES('J. B. Hunt', 1004, 'Room');
+			
+		INSERT INTO Resources
+		VALUES('J. B. Hunt', 1005, 'Room');
+			
+		INSERT INTO Resources
+		VALUES('D. H. Hill', 1006, 'Room');
+			
+
+		INSERT INTO Resources
+		VALUES('J. B. Hunt', 1007, 'Room');
+			
+		INSERT INTO Resources
+		VALUES('', 0007,'Book');
+
+		
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies,author)
+		VALUES('B1','0001','Introduction to Chemistry','2005','Physical copy','Pub1','1','2', 'SK Goyal');
+		
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies, author)
+		VALUES('B1','0002','Introduction to Chemistry','2005','Electronic copy','Pub1','1','0', 'SK Goyal');
+		
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies, author)
+		VALUES('B2','0003','Introduction to Organic Chemistry','2006','Physical copy','Pub2','2','2', 'HC Verma');
+	
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies, author)
+		VALUES('B2','0004','Introduction to Organic Chemistry','2006','Electronic copy','Pub2','2','0', 'HC Verma');
+		
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies, author)
+		VALUES('B3','0005','Introduction to Physical Chemistry','2000','Physical copy','Pub3','3','2', 'Halliday, Resnick, Walker');
+		
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies, author)
+		VALUES('B4','0006','Introduction to Inorganic Chemistry','2005','Physical copy','Pub4','4','2', 'RC Mukherjee');
+		
+		INSERT INTO BOOKS(ISBN,resource_id,title,year_published,type,publisher,edition,copies, author)
+		VALUES('B5test','0007','Introduction to Inorganic Chemistry','2005','Physical copy','Pubtest','4','2', 'Gaurav');
+		
+		INSERT INTO JOURNALS(ISSN,resource_id,title,year_published, author)
+		VALUES('J1','3001','Journal of Web Semantic','2010', 'Roberto Navigli');
+		
+		INSERT INTO JOURNALS(ISSN,resource_id,title,year_published, author)
+		VALUES('J2','3002','International Journal on Semantic Web and Information','2011', 'Tim Berners Lee');
+		
+		INSERT INTO CONFERENCE_PROCEEDINGS(conf_num,resource_id,title,year_published,conference_name, author)
+		VALUES('C1','4001','Optimization Techniques for Large Scale Graph Analytics on Map Reduce','2013','WWW', 'HyeongSik Kim');
+		
+		INSERT INTO CONFERENCE_PROCEEDINGS(conf_num,resource_id,title,year_published,conference_name, author)
+		VALUES('C2','4002','An agglomerative query model for discovery in linked data: semantics and approach','2014','SIGMOD', 'Sidan Gao');
+		
+		INSERT INTO CAMERAS(camera_id,make,model,lens_config,available_memory,resource_id)
+		VALUES('CA1','Olympus','E620','1442mm lens 1:3.55.6','16G','2001');
+		
+		INSERT INTO CAMERAS(camera_id,make,model,lens_config,available_memory,resource_id)
+		VALUES('CA2','Cannon','EOS Rebel T4i','18135mm EFS IS STM Lens','32G','2002');
+		
+		INSERT INTO CAMERAS(camera_id,make,model,lens_config,available_memory,resource_id)
+		VALUES('CA3','Cannon','EOS Rebel T4i','18135mm EFS IS STM Lens','32G','2003');
+
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R1', 2, 3, 'Conference Room',1001);
+			
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R2', 3, 3, 'Study Room',1002);
+			
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R3', 4, 2, 'Study Room',1003);
+			
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R4', 3, 3, 'Conference Room',1004);
+			
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R5', 4, 3, 'Study Room',1005);
+			
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R6', 4, 3, 'Study Room',1006);
+			
+		INSERT INTO Rooms(room_number, capacity, floor, type, res_id)
+		VALUES('R7', 2, 2, 'Study Room',1007);
+		
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES('08-Nov-2015', '09-Nov-2015', '13-Nov-2015', '0003', 'jpink');
+		UPDATE Books
+		SET copies = copies - 1
+		WHERE resource_id = '0003';
+
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES('07-Nov-2015', '08-Nov-2015', '11-Nov-2015', '0006', 'sgood');
+		UPDATE Books
+		SET copies = copies - 1
+		WHERE resource_id = '0006';
+		
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES('01-Jul-2015', '', '08-Aug-2015', '0006', 'wjr');
+		UPDATE Books
+		SET copies = copies - 1
+		WHERE resource_id = '0006';
+		
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES('01-Oct-2015', '', '10-Oct-2015', '0003', 'gboet');
+		UPDATE Books
+		SET copies = copies - 1
+		WHERE resource_id = '0003';
+		
+		
+		INSERT INTO RESERVED_BOOKS
+		values('B1','0001','wwhite',101,TO_DATE('2015/08/01 09:00:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/12/01 11:30:00', 'yyyy/mm/dd hh24:mi:ss'));
+		
+		INSERT INTO RESERVED_BOOKS
+		values('B3','0005','hschrad',103,TO_DATE('2015/08/01 09:00:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/12/01 11:30:00', 'yyyy/mm/dd hh24:mi:ss'));
+		            
+       
+                    
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES(TO_DATE('2015/11/01 09:00:00', 'yyyy/mm/dd hh24:mi:ss'), '', TO_DATE('2015/11/01 11:30:00', 'yyyy/mm/dd hh24:mi:ss'),'1003', 'wwhite');
+ 		
+		
+            
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES(TO_DATE('2015/10/12 15:00:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/10/12 15:15:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/10/12 17:00:00', 'yyyy/mm/dd hh24:mi:ss'), '1005', 'jpink');
+ 
+		
+            
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES(TO_DATE('2015/10/12 11:00:00', 'yyyy/mm/dd hh24:mi:ss'), '', TO_DATE('2015/10/12 13:30:00', 'yyyy/mm/dd hh24:mi:ss'), '1006', 'swhite');
+ 				
+		
+            
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES(TO_DATE('2015/10/20 09:00:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/10/20 09:10:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/10/20 10:30:00', 'yyyy/mm/dd hh24:mi:ss'), '1001', 'gfring');
+		
+		-- Camera Test Data
+		INSERT INTO Rental_History(checked_out, checked_in, due_date, Resource_id, unityId)
+		VALUES(TO_DATE('2015/11/13 10:00:00', 'yyyy/mm/dd hh24:mi:ss'), '14-Nov-2015', TO_DATE('2015/11/19 18:00:00', 'yyyy/mm/dd hh24:mi:ss'), '2002', 'gboet');
+		
+		INSERT INTO Rental_History(checked_out, due_date, Resource_id, unityId)
+        VALUES(TO_DATE('2015/10/30 10:00:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/11/05 18:00:00', 'yyyy/mm/dd hh24:mi:ss'), '2001', 'jpink');
+		
+		INSERT INTO Rental_History(checked_out, due_date, Resource_id, unityId)
+		VALUES(TO_DATE('2015/10/16 10:00:00', 'yyyy/mm/dd hh24:mi:ss'), TO_DATE('2015/10/22 18:00:00', 'yyyy/mm/dd hh24:mi:ss'), '2003', 'wjr');			
+		
+		-- Notifications for wjr overdue book
+		INSERT INTO NOTIFICATIONS (RESOURCE_ID, PATRON_UNITYID, MESSAGE, NOTIFICATION_DATE) 
+		VALUES('0006', 'wjr', 'This Resource is 30 Days Late.', '06-Sep-2015');
+		
+		INSERT INTO NOTIFICATIONS (RESOURCE_ID, PATRON_UNITYID, MESSAGE, NOTIFICATION_DATE) 
+		VALUES('0006', 'wjr', 'This Resource is 60 Days Late.', '06-Oct-2015');
+		
+		</sql>
+	</changeSet>
+
+</databaseChangeLog>
